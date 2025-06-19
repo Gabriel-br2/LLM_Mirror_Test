@@ -1,0 +1,4 @@
+numpy==2.2.6
+pyaml==25.5.0
+pygame==2.6.1
+PyYAML==6.0.2
