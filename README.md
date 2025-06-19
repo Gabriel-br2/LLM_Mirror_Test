@@ -44,14 +44,9 @@ The system is configured through the `config.yaml` file, which includes:
 
 ## ▶️ How to Run
 
-1. **Configure your API key** (if using OpenAI or similar LLMs):
-   ```bash
-   export OPENAI_API_KEY=your-key-here
-   ```
+1. **Edit `config.yaml`** as needed for your experiment.
 
-2. **Edit `config.yaml`** as needed for your experiment.
-
-3. **Start the simulation:**
+2. **Start the simulation:**
    ```bash
    python main.py
    ```
