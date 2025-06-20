@@ -91,6 +91,7 @@ class Simulation:
         Main game loop. Handles events, updates game state, and renders the grid.
         """
         running = True
+        self.generate_JSON(action="start", thought="")  # Initial state
         while running:
             key_down = False  # Track if a valid key was pressed
             for event in pygame.event.get():
