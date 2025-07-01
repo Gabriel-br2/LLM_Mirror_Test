@@ -1,5 +1,6 @@
 game:
   characters_num: 4
+  door_size: 5
 screen:
   space_tam: 2
   square_tam: 50

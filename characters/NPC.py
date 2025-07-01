@@ -21,9 +21,11 @@ class NPC(Character):
                    otherwise returns the current position.
         """
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-        random.shuffle(directions)  # Shuffle directions for randomness
-        for dy, dx in directions:
-            new_y, new_x = self.pos[0] + dy, self.pos[1] + dx
-            if self.can_move(grid, (new_y, new_x)):
-                return (new_y, new_x)  # Return the first valid move found
+        dy, dx = random.choice(directions)  # Shuffle directions for randomness
+        
+        new_y, new_x = self.pos[0] + dy, self.pos[1] + dx
+        
+        if self.can_move(grid, (new_y, new_x)):
+            return (new_y, new_x)  # Return the first valid move found
+        
         return self.pos  # If no valid move, stay in

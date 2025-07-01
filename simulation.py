@@ -35,13 +35,13 @@ class Simulation:
 
     def __init__(self):
         """
-        Initializes the simulation, loads configuration, creates grid and characters,
-        and sets up Pygame.
+        Initializes the simulation, loads configuration, creates grid and characters
         """
         self.turn = 0  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
+        self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
-
+        
         self._load_config()  # Load configuration values
         self._init_grid_and_characters()  # Create grid and characters
         self._init_pygame()  # Initialize Pygame window and clock
@@ -56,9 +56,10 @@ class Simulation:
         self.x_grid_max = cfg.config["screen"]["x_grid_max"] + 2
         self.y_grid_max = cfg.config["screen"]["y_grid_max"] + 2
         self.square_tam = cfg.config["screen"]["square_tam"]
+        self.door_size = cfg.config["game"]["door_size"]
 
         self.characters_num = cfg.config["game"]["characters_num"]
-        self._check_config()  # Validate configuration
+        self._check_config()
 
         # Randomly select which character is player-controlled
         self.controlable_character = random.randint(0, self.characters_num - 1)
@@ -70,7 +71,7 @@ class Simulation:
         """
         # Generate grid and get initial positions for all characters
         self.mainGrid, positions = _generate_grid(
-            self.y_grid_max, self.x_grid_max, self.characters_num
+            self.y_grid_max, self.x_grid_max, self.characters_num, self.door_size
         )
 
         self.characters = []
@@ -80,13 +81,15 @@ class Simulation:
             if idx == self.controlable_character:
                 # Create player-controlled character
                 self.characters.append(
-                    Player(idx, pos, color, self.BALL_RADIUS, self.square_tam)
+                    Player(idx, pos, color, self.BALL_RADIUS, self.square_tam, self.door_state)
                 )
             else:
                 # Create NPC character
                 self.characters.append(
-                    NPC(idx, pos, color, self.BALL_RADIUS, self.square_tam)
+                    NPC(idx, pos, color, self.BALL_RADIUS, self.square_tam, self.door_state)
                 )
+                
+        self.characters_original = self.characters.copy()  
 
     def main_loop(self):
         """
@@ -102,12 +105,14 @@ class Simulation:
                 elif event.type == pygame.KEYDOWN:
                     key_down = self._handle_keydown(event)  # Handle key press
 
+            self.render_grid()  # Draw everything
+
             if key_down:
                 self.turn += 1  # Advance turn
                 self._move_npcs()  # Move all NPCs
                 self.generate_JSON()  # Output current state
 
-            self.render_grid()  # Draw everything
+                #self._print_ascii_grid()
 
     def _handle_keydown(self, event):
         """
@@ -119,7 +124,13 @@ class Simulation:
         Returns:
             bool: True if a valid action was performed, False otherwise.
         """
-        player = self.characters[self.controlable_character]
+        
+        index_ajustable = self.controlable_character
+        for i in range(self.controlable_character):
+            if self.characters_original[i] not in self.characters:
+                index_ajustable -= 1
+          
+        player = self.characters[index_ajustable]
 
         # Handle movement keys (1-4)
         if event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4]:
@@ -130,13 +141,13 @@ class Simulation:
                 self.mainGrid[new_pos[0], new_pos[1]] == "D"
                 and self.door_state == "open"
             ):
-                player.move(self.mainGrid, new_pos)
+                player.move(self.mainGrid, new_pos, self.door_state)
                 print("YOU WIN!" if len(self.characters) == 1 else "YOU LOSE!")
                 pygame.quit()
                 exit()
             else:
                 # Move player if possible
-                player.move(self.mainGrid, new_pos)
+                player.move(self.mainGrid, new_pos, self.door_state)
             return True
 
         # Open the door with key 5
@@ -157,9 +168,11 @@ class Simulation:
         """
         npcs_to_remove = []
         for idx, char in enumerate(self.characters):
-            if idx != self.controlable_character:
+            
+            if type(self.characters[idx]) == NPC:
                 npc = char
                 new_pos = npc.get_random_move(self.mainGrid)
+                
                 # If NPC reaches the open door, remove it from the game
                 if (
                     self.mainGrid[new_pos[0], new_pos[1]] == "D"
@@ -168,7 +181,8 @@ class Simulation:
                     self.mainGrid[npc.pos] = "."
                     npcs_to_remove.append(npc)
                 else:
-                    npc.move(self.mainGrid, new_pos)
+                    npc.move(self.mainGrid, new_pos, self.door_state)
+                    
         # Remove NPCs that exited through the door
         for npc in npcs_to_remove:
             self.characters.remove(npc)
@@ -283,9 +297,29 @@ class Simulation:
                 "Number of characters must be 9 or less to fit in the grid."
             )
 
+        if self.door_size % 2 == 0: 
+            raise ValueError("Door size must be an odd number.")
+
+        if self.door_size < 1:
+            raise ValueError("Door size must be at least 1.")
+        
+        if self.x_grid_max < 3 or self.y_grid_max < 3:
+            raise ValueError("Grid size must be at least 3x3 to accommodate walls and characters.")
+        
+        if self.x_grid_max < self.door_size:
+            print("WARNING: Door size exceeds grid width, adjusting to fit.")
+            self.door_size =  self.x_grid_max
+        
+        elif self.y_grid_max < self.door_size:
+            print("WARNING: Door size exceeds grid width, adjusting to fit.")
+            self.door_size =  self.y_grid_max
+            
+                    
+        if self.square_tam < 20:
+            raise ValueError("Square size must be at least 20 pixels for visibility.")  
+
 
 if __name__ == "__main__":
     simul = Simulation()
     simul.main_loop()
-
     pygame.quit()

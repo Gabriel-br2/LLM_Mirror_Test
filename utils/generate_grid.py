@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 
-def _generate_grid(y_grid_max, x_grid_max, characters_num):
+def _generate_grid(y_grid_max, x_grid_max, characters_num, door_size=3):
     """
     Generates a 2D grid with borders, randomly placed characters, and a door on a random border.
 
@@ -46,23 +46,24 @@ def _generate_grid(y_grid_max, x_grid_max, characters_num):
         range(1, x_grid_max - 1) if door_wall in [0, 2] else range(1, y_grid_max - 1)
     )
 
-    if door_wall == 0:  # North border
+    door_size_mid = (door_size - 1) // 2
+
+    if door_wall in [0, 2]:  # Norte ou Sul
         door_x = random.choice(wall_range)
-        door_y = 0
+        door_y = 0 if door_wall == 0 else y_grid_max - 1
+        d1, d2 = door_x - door_size_mid, door_x + door_size_mid + 1
 
-    elif door_wall == 1:  # East border
-        door_x = x_grid_max - 1
+        d1 = max(d1+1, 0)
+        d2 = min(d2, x_grid_max-1)
+        mainGrid[door_y, d1:d2] = "D"
+
+    elif door_wall in [1, 3]:  # Leste ou Oeste
+        door_x = x_grid_max - 1 if door_wall == 1 else 0
         door_y = random.choice(wall_range)
-
-    elif door_wall == 2:  # South border
-        door_x = random.choice(wall_range)
-        door_y = y_grid_max - 1
-
-    elif door_wall == 3:  # West border
-        door_x = 0
-        door_y = random.choice(wall_range)
-
-    # Place the door on the selected border
-    mainGrid[door_y, door_x] = "D"
+        d1, d2 = door_y - door_size_mid, door_y + door_size_mid + 1
+        
+        d1 = max(d1+1, 0)
+        d2 = min(d2, x_grid_max-1)
+        mainGrid[d1:d2, door_x] = "D"
 
     return mainGrid, positions

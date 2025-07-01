@@ -7,7 +7,7 @@ class Character:
     Handles position, drawing, and movement logic.
     """
 
-    def __init__(self, idx, pos, color, ball_radius, square_tam):
+    def __init__(self, idx, pos, color, ball_radius, square_tam, door_state):
         """
         Initializes a Character instance.
 
@@ -23,6 +23,7 @@ class Character:
         self.color = color
         self.ball_radius = ball_radius
         self.square_tam = square_tam
+        self.door_state = door_state
 
     def can_move(self, grid, new_pos):
         """
@@ -36,9 +37,9 @@ class Character:
             bool: True if the move is valid (cell is empty), False otherwise.
         """
         y, x = new_pos
-        return grid[y, x] == "."
+        return grid[y, x] == "." or (grid[y, x] == "D" and self.door_state == "open") 
 
-    def move(self, grid, new_pos):
+    def move(self, grid, new_pos, door_state):
         """
         Moves the character to a new position if the move is valid.
 
@@ -49,6 +50,7 @@ class Character:
         Returns:
             bool: True if the move was successful, False otherwise.
         """
+        self.door_state = door_state
         if self.can_move(grid, new_pos):
             grid[self.pos] = "."  # Clear current position
             self.pos = new_pos

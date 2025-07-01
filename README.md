@@ -60,9 +60,10 @@ The system is configured through the `config.yaml` file, which includes:
 - Logging captures each step, including agent positions, door state, and the LLM's internal "thoughts."
 
 ## 🧾 Version
-- **Current Version:** 1.0.0
+- **Current Version:** 1
 - **Changelog:**
-  - **1.0.0** — Initial public release with grid simulation, randomized button mapping, and LLM interaction.
+  - **1.0** — Initial public release with grid simulation, randomized button mapping.
+      - **1.1** — Bug that did not allow NPS to leave through the door resolved, added port size parameter,
 
 ## 👥 Team
 - Rodrigo da S. Guerra
