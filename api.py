@@ -32,7 +32,8 @@ class LLMApi:
 
     def request(self) -> str:
         request = self.client.chat.completions.create(
-            model="openai/gpt-4o", messages=[{"role": "user", "content": self.payload}]
+            model=self.model, 
+            messages=[{"role": "user", "content": self.payload}]
         )
         return request.choices[0].message.content
 

@@ -23,6 +23,44 @@ The system is configured through the `config.yaml` file, which includes:
 - **Logging:** Toggle logging of episodes and thoughts.
 - **Agent Parameters:** NPC behavior randomness, LLM interaction settings.
 
+
+## 🤖 LLM Integration
+
+The simulation integrates an LLM through a dedicated API class using the [OpenRouter](https://openrouter.ai) platform. The `LLMApi` class manages context injection, message formatting, and response handling.
+
+Key features:
+
+- The model receives context about the environment and a JSON structure it must follow.
+- At each turn, the LLM receives a structured JSON containing:
+  - Grid state (ASCII representation),
+  - Agent positions,
+  - Door state,
+  - Button map,
+  - Turn memory (past actions and thoughts).
+- The model responds with a new `thought` and `choice` of button to press.
+
+**Default model used for experiments:**
+```
+deepseek/deepseek-v3-base:free
+```
+
+> Example initialization:
+```python
+api = LLMApi("https://openrouter.ai/api/v1", model="deepseek/deepseek-v3-base:free")
+```
+
+> Context sent to the model:
+```
+You are observing a simulation with several moving agents and a door. 
+You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. 
+Your goal is to help all agents exit through the door. 
+Use the outcomes of each action to understand the system and act accordingly. 
+After each step, think out loud and choose the next button.
+```
+
+The `Simulation` class uses this API to fetch the LLM's action suggestion at each step and proceeds with the environment update accordingly.
+
+
 # 💻 Installation
 
 1. **Clone the repository:**
