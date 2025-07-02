@@ -42,7 +42,7 @@ class LLMApi(object):
 def main():
     api = LLMApi("https://openrouter.ai/api/v1",model="deepseek/deepseek-v3-base:free")
     api.setInitialContext("You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button.")
-    data = {'turn': 0, 'door_state': 'closed', 'agents': [{'id': 1, 'x': 4, 'y': 4}, {'id': 2, 'x': 5, 'y': 8}, {'id': 3, 'x': 8, 'y': 5}, {'id': 4, 'x': 1, 'y': 5}], 'ascii_grid': ['######DDD#', '#....4...#', '#........#', '#........#', '#...1....#', '#.......2#', '#........#', '#........#', '#....3...#', '##########'], 'button_map': ['btn1', 'btn2', 'btn3' 'btn4', 'btn5', 'btn6'], 'memory': [{'turn': 0, 'action': 'start', 'thought': ''}]}
+    data = {'turn': 0, 'door_state': 'closed', 'agents': [{'id': 1, 'x': 4, 'y': 4}, {'id': 2, 'x': 5, 'y': 8}, {'id': 3, 'x': 8, 'y': 5}, {'id': 4, 'x': 1, 'y': 5}], 'ascii_grid': ['######DDD#', '#....4...#', '#........#', '#........#', '#...1....#', '#.......2#', '#........#', '#........#', '#....3...#', '##########'], 'button_map': ['btn1', 'btn2', 'btn3', 'btn4', 'btn5', 'btn6'], 'memory': [{'turn': 0, 'action': 'start', 'thought': ''}]}
     api.generate(msg=data)
 
     print(api.request())
