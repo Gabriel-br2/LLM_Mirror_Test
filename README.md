@@ -65,6 +65,9 @@ The system is configured through the `config.yaml` file, which includes:
   - **1.0** — Initial public release with grid simulation, randomized button mapping.
       - **1.1** — Bug that did not allow NPS to leave through the door resolved, added port size parameter.
       - **1.2** — Adding key shuffling each time the simulation starts, added example api code for openrouter.
+      - **1.3** — Simulator integration with LLM, dfor testing we use deepseek-v3-base:free
+   
+
 
 ## 👥 Team
 - Rodrigo da S. Guerra

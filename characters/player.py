@@ -1,12 +1,14 @@
-import pygame
-from characters.character import Character
 
+
+from characters.character import Character
 
 class Player(Character):
     """
     Player class that inherits from Character.
     Handles self movement based on keyboard input events.
     """
+    def __init__(self, *args):
+        super().__init__(*args)
 
     def get_move(self, action):
         """

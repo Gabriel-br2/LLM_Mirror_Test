@@ -37,6 +37,10 @@ class LLMApi:
         return request.choices[0].message.content
 
 
+
+
+
+
 def main():
     api = LLMApi("https://openrouter.ai/api/v1", model="deepseek/deepseek-v3-base:free")
 

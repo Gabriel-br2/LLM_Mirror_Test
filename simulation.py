@@ -3,6 +3,9 @@ import json
 import random
 
 import pygame
+
+from api import LLMApi
+
 from characters.NPC import NPC
 from characters.player import Player
 from utils.config import mainConfig
@@ -39,7 +42,8 @@ class Simulation:
         self.memory = []  # Stores actions and thoughts for each turn
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
-
+        self.data = ""
+        
         actions = [
             "move_left",
             "move_right",
@@ -48,7 +52,8 @@ class Simulation:
             "open_door",
             "close_door",
         ]
-        keys = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6]
+        #keys = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6]
+        keys = ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"]
         random.shuffle(actions)
 
         self.key_action_map = dict(zip(keys, actions))
@@ -56,6 +61,16 @@ class Simulation:
         self._load_config()  # Load configuration values
         self._init_grid_and_characters()  # Create grid and characters
         self._init_pygame()  # Initialize Pygame window and clock
+
+        self.api = LLMApi("https://openrouter.ai/api/v1", model="deepseek/deepseek-v3-base:free")
+
+        self.api.setInitialContext(
+            "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button."
+        )
+
+    def request_action(self,data):
+        self.api.generate(msg=data)
+        return self.api.request()
 
         # self._print_ascii_grid()  # Uncomment to print grid in ASCII
 
@@ -122,24 +137,39 @@ class Simulation:
         """
         running = True
         self.generate_JSON(action="start", thought="")  # Initial state
+        
+        f = 0
         while running:
+            f += 1
             key_down = False  # Track if a valid key was pressed
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False  # Exit loop if window is closed
-                elif event.type == pygame.KEYDOWN:
-                    key_down = self._handle_keydown(event)  # Handle key press
+                #elif event.type == pygame.KEYDOWN:
+                #    key_down = self._handle_keydown(event)  # Handle key press
+
+            if (f % 1 == 0) or (f == 1):
+                reply = self.request_action(self.data)
+                print("Reply receved", reply)
+                print("-" * 130)
+
+                try:        
+                    response = json.loads(reply)
+                except:
+                    self.generate_JSON("error", "response sent in invalid format")
+                    continue
+                
+                
+                self._handle_action(response["choice"])
+
+                self.turn += 1        # Advance turn
+                self._move_npcs()     # Move all NPCs
+                self.generate_JSON(response["choice"], response["thought"])
 
             self.render_grid()  # Draw everything
-
-            if key_down:
-                self.turn += 1  # Advance turn
-                self._move_npcs()  # Move all NPCs
-                self.generate_JSON()  # Output current state
-
                 # self._print_ascii_grid()
 
-    def _handle_keydown(self, event):
+    def _handle_action(self, choice):
         """
         Handles randomized keyboard input events.
 
@@ -155,7 +185,7 @@ class Simulation:
                 index_ajustable -= 1
         player = self.characters[index_ajustable]
 
-        action = self.key_action_map.get(event.key)
+        action = self.key_action_map.get(choice)
         new_pos = player.get_move(action)
 
         if new_pos:
@@ -230,7 +260,7 @@ class Simulation:
             "memory": self.memory,
         }
 
-        # print(data)
+        self.data = json.dumps(data, indent=2)
         # To return as JSON string: return json.dumps(data, indent=2)
 
     def render_grid(self):
