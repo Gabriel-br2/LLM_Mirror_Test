@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-
 import json
 import random
 
 import pygame
-
 from characters.NPC import NPC
 from characters.player import Player
 from utils.config import mainConfig
@@ -41,7 +39,20 @@ class Simulation:
         self.memory = []  # Stores actions and thoughts for each turn
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
-        
+
+        actions = [
+            "move_left",
+            "move_right",
+            "move_up",
+            "move_down",
+            "open_door",
+            "close_door",
+        ]
+        keys = [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6]
+        random.shuffle(actions)
+
+        self.key_action_map = dict(zip(keys, actions))
+
         self._load_config()  # Load configuration values
         self._init_grid_and_characters()  # Create grid and characters
         self._init_pygame()  # Initialize Pygame window and clock
@@ -81,15 +92,29 @@ class Simulation:
             if idx == self.controlable_character:
                 # Create player-controlled character
                 self.characters.append(
-                    Player(idx, pos, color, self.BALL_RADIUS, self.square_tam, self.door_state)
+                    Player(
+                        idx,
+                        pos,
+                        color,
+                        self.BALL_RADIUS,
+                        self.square_tam,
+                        self.door_state,
+                    )
                 )
             else:
                 # Create NPC character
                 self.characters.append(
-                    NPC(idx, pos, color, self.BALL_RADIUS, self.square_tam, self.door_state)
+                    NPC(
+                        idx,
+                        pos,
+                        color,
+                        self.BALL_RADIUS,
+                        self.square_tam,
+                        self.door_state,
+                    )
                 )
-                
-        self.characters_original = self.characters.copy()  
+
+        self.characters_original = self.characters.copy()
 
     def main_loop(self):
         """
@@ -112,11 +137,11 @@ class Simulation:
                 self._move_npcs()  # Move all NPCs
                 self.generate_JSON()  # Output current state
 
-                #self._print_ascii_grid()
+                # self._print_ascii_grid()
 
     def _handle_keydown(self, event):
         """
-        Handles keyboard input events for player movement and door state changes.
+        Handles randomized keyboard input events.
 
         Args:
             event (pygame.event.Event): The keyboard event.
@@ -124,19 +149,16 @@ class Simulation:
         Returns:
             bool: True if a valid action was performed, False otherwise.
         """
-        
         index_ajustable = self.controlable_character
         for i in range(self.controlable_character):
             if self.characters_original[i] not in self.characters:
                 index_ajustable -= 1
-          
         player = self.characters[index_ajustable]
 
-        # Handle movement keys (1-4)
-        if event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4]:
-            new_pos = player.get_move(event)
+        action = self.key_action_map.get(event.key)
+        new_pos = player.get_move(action)
 
-            # Check if player is moving to the door and the door is open
+        if new_pos:
             if (
                 self.mainGrid[new_pos[0], new_pos[1]] == "D"
                 and self.door_state == "open"
@@ -146,21 +168,18 @@ class Simulation:
                 pygame.quit()
                 exit()
             else:
-                # Move player if possible
                 player.move(self.mainGrid, new_pos, self.door_state)
             return True
 
-        # Open the door with key 5
-        elif event.key == pygame.K_5:
+        elif action == "open_door":
             self.door_state = "open"
             return True
 
-        # Close the door with key 6
-        elif event.key == pygame.K_6:
+        elif action == "close_door":
             self.door_state = "closed"
             return True
 
-        return False  # No valid action
+        return False
 
     def _move_npcs(self):
         """
@@ -168,11 +187,11 @@ class Simulation:
         """
         npcs_to_remove = []
         for idx, char in enumerate(self.characters):
-            
+
             if type(self.characters[idx]) == NPC:
                 npc = char
                 new_pos = npc.get_random_move(self.mainGrid)
-                
+
                 # If NPC reaches the open door, remove it from the game
                 if (
                     self.mainGrid[new_pos[0], new_pos[1]] == "D"
@@ -182,7 +201,7 @@ class Simulation:
                     npcs_to_remove.append(npc)
                 else:
                     npc.move(self.mainGrid, new_pos, self.door_state)
-                    
+
         # Remove NPCs that exited through the door
         for npc in npcs_to_remove:
             self.characters.remove(npc)
@@ -211,7 +230,7 @@ class Simulation:
             "memory": self.memory,
         }
 
-        print(data)
+        # print(data)
         # To return as JSON string: return json.dumps(data, indent=2)
 
     def render_grid(self):
@@ -297,26 +316,27 @@ class Simulation:
                 "Number of characters must be 9 or less to fit in the grid."
             )
 
-        if self.door_size % 2 == 0: 
+        if self.door_size % 2 == 0:
             raise ValueError("Door size must be an odd number.")
 
         if self.door_size < 1:
             raise ValueError("Door size must be at least 1.")
-        
+
         if self.x_grid_max < 3 or self.y_grid_max < 3:
-            raise ValueError("Grid size must be at least 3x3 to accommodate walls and characters.")
-        
+            raise ValueError(
+                "Grid size must be at least 3x3 to accommodate walls and characters."
+            )
+
         if self.x_grid_max < self.door_size:
             print("WARNING: Door size exceeds grid width, adjusting to fit.")
-            self.door_size =  self.x_grid_max
-        
+            self.door_size = self.x_grid_max
+
         elif self.y_grid_max < self.door_size:
             print("WARNING: Door size exceeds grid width, adjusting to fit.")
-            self.door_size =  self.y_grid_max
-            
-                    
+            self.door_size = self.y_grid_max
+
         if self.square_tam < 20:
-            raise ValueError("Square size must be at least 20 pixels for visibility.")  
+            raise ValueError("Square size must be at least 20 pixels for visibility.")
 
 
 if __name__ == "__main__":

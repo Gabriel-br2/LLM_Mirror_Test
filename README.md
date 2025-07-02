@@ -63,7 +63,8 @@ The system is configured through the `config.yaml` file, which includes:
 - **Current Version:** 1
 - **Changelog:**
   - **1.0** — Initial public release with grid simulation, randomized button mapping.
-      - **1.1** — Bug that did not allow NPS to leave through the door resolved, added port size parameter,
+      - **1.1** — Bug that did not allow NPS to leave through the door resolved, added port size parameter.
+      - **1.2** — Adding key shuffling each time the simulation starts, added example api code for openrouter.
 
 ## 👥 Team
 - Rodrigo da S. Guerra
