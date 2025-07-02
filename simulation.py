@@ -8,6 +8,8 @@ from api import LLMApi
 
 from characters.NPC import NPC
 from characters.player import Player
+
+from utils.generate_log import JsonLogger
 from utils.config import mainConfig
 from utils.generate_grid import _generate_grid
 
@@ -40,6 +42,10 @@ class Simulation:
         """
         self.turn = 0  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
+        self.memory_positions = []
+        self.memory_ascii = []
+        self.Logger = JsonLogger()
+        
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
         self.data = ""
@@ -62,10 +68,10 @@ class Simulation:
         self._init_grid_and_characters()  # Create grid and characters
         self._init_pygame()  # Initialize Pygame window and clock
 
-        self.api = LLMApi("https://openrouter.ai/api/v1", model="deepseek/deepseek-v3-base:free")
+        self.api = LLMApi("https://openrouter.ai/api/v1", model="google/gemma-3n-e4b-it:free")
 
         self.api.setInitialContext(
-            "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button."
+            "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button. Please respond only with a JSON string matching this schema. Do not include any explanations, thoughts, or markdown."
         )
 
     def request_action(self,data):
@@ -148,17 +154,23 @@ class Simulation:
                 #elif event.type == pygame.KEYDOWN:
                 #    key_down = self._handle_keydown(event)  # Handle key press
 
-            if (f % 1 == 0) or (f == 1):
+            if (f % 2 == 0):
                 reply = self.request_action(self.data)
-                print("Reply receved", reply)
-                print("-" * 130)
+                
+                reply = reply.replace("```json", "")
+                reply = reply.replace("```", "")                
+                
+                #print(self.data)
+                print("Reply received: ", reply)
+                print("-" * 100)
 
-                try:        
+                try:
                     response = json.loads(reply)
                 except:
-                    self.generate_JSON("error", "response sent in invalid format")
+                    self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format {'thought': 'this is your thoughts', 'choice': 'this your choice'} do not send complementary text only JSON in this format")
                     continue
                 
+                self.Logger.log(self.data, reply)
                 
                 self._handle_action(response["choice"])
 
@@ -245,24 +257,26 @@ class Simulation:
             thought (str, optional): The thought or reasoning for the action.
         """
         # Add current turn's action and thought to memory
-        self.memory.append({"turn": self.turn, "action": action, "thought": thought})
 
+        agents_position = [
+                {"id": char.idx + 1, "x": char.pos[0], "y": char.pos[1]}
+                for char in self.characters
+            ]
+        
+        self.memory.append({"turn": self.turn, "action": action, "thought": thought, "agents_position": [agents_position]})
+        
         # Build the data dictionary representing the current state
         data = {
             "turn": self.turn,
             "door_state": self.door_state,
-            "agents": [
-                {"id": char.idx + 1, "x": char.pos[0], "y": char.pos[1]}
-                for char in self.characters
-            ],
+            "agents": agents_position,
             "ascii_grid": ["".join(row) for row in self.mainGrid.tolist()],
             "button_map": ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"],
-            "memory": self.memory,
+            "memory": self.memory    
         }
 
         self.data = json.dumps(data, indent=2)
-        # To return as JSON string: return json.dumps(data, indent=2)
-
+                
     def render_grid(self):
         """
         Renders the grid and all characters on the Pygame window.

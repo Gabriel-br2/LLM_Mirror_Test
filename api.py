@@ -33,7 +33,8 @@ class LLMApi:
     def request(self) -> str:
         request = self.client.chat.completions.create(
             model=self.model, 
-            messages=[{"role": "user", "content": self.payload}]
+            messages=[{"role": "user", "content": self.payload}],
+            response_format="json_object"
         )
         return request.choices[0].message.content
 
