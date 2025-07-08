@@ -1,15 +1,28 @@
 #!/usr/bin/env python
 import json
+import os
 
 from openai import OpenAI
 
 
 class LLMApi:
-    def __init__(self, base_url, model, key_path="key.json"):
-        with open(key_path) as key_file:
-            self.key = json.load(key_file)["key"]
-        self.client = OpenAI(base_url=base_url, api_key=self.key)
-        self.model = model
+    def __init__(self, config_path: str):
+        
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(base_dir, config_path)
+        try:
+            with open(config_path, 'r') as config_file:
+                config = json.load(config_file)
+                self.client = OpenAI(base_url= config['api_client']['base_url'],
+                                     api_key= config['api_client']['api_key'])
+                self.model = config['api_model']['model']
+                self.api_extra_headers = config['api_extra_headers'].get('extra_headers', {})
+        except FileNotFoundError:
+            print(f"Configuration file not found at {config_path}")
+            return None
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON from the configuration file at {config_path}")
+            return None 
 
     def setInitialContext(self, context: str):
         self.context = context
@@ -34,12 +47,12 @@ class LLMApi:
         request = self.client.chat.completions.create(
             model=self.model, 
             messages=[{"role": "user", "content": self.payload}],
-            response_format="json_object"
+            response_format={"type": "json_object"}
         )
         return request.choices[0].message.content
 
 def main():
-    api = LLMApi("https://openrouter.ai/api/v1", model="deepseek/deepseek-v3-base:free")
+    api = LLMApi('configapi.json')
 
     api.setInitialContext(
         "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button."
@@ -47,7 +60,7 @@ def main():
 
     data = {}
 
-    # data = {'turn': 0, 'door_state': 'closed', 'agents': [{'id': 1, 'x': 4, 'y': 4}, {'id': 2, 'x': 5, 'y': 8}, {'id': 3, 'x': 8, 'y': 5}, {'id': 4, 'x': 1, 'y': 5}], 'ascii_grid': ['######DDD#', '#....4...#', '#........#', '#........#', '#...1....#', '#.......2#', '#........#', '#........#', '#....3...#', '##########'], 'button_map': ['btn1', 'btn2', 'btn3' 'btn4', 'btn5', 'btn6'], 'memory': [{'turn': 0, 'action': 'start', 'thought': ''}]}
+    data = {'turn': 0, 'door_state': 'closed', 'agents': [{'id': 1, 'x': 4, 'y': 4}, {'id': 2, 'x': 5, 'y': 8}, {'id': 3, 'x': 8, 'y': 5}, {'id': 4, 'x': 1, 'y': 5}], 'ascii_grid': ['######DDD#', '#....4...#', '#........#', '#........#', '#...1....#', '#.......2#', '#........#', '#........#', '#....3...#', '##########'], 'button_map': ['btn1', 'btn2', 'btn3' 'btn4', 'btn5', 'btn6'], 'memory': [{'turn': 0, 'action': 'start', 'thought': ''}]}
 
     api.generate(msg=data)
 

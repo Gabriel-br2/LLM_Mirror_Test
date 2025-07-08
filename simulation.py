@@ -68,7 +68,7 @@ class Simulation:
         self._init_grid_and_characters()  # Create grid and characters
         self._init_pygame()  # Initialize Pygame window and clock
 
-        self.api = LLMApi("https://openrouter.ai/api/v1", model="google/gemma-3n-e4b-it:free")
+        self.api = LLMApi('configapi.json')  # Initialize LLM API
 
         self.api.setInitialContext(
             "You are observing a simulation with several moving agents and a door. Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help the agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud your reasoning and choose the next button. Please respond only with a JSON string matching this schema. Do not include any explanations, thoughts, or markdown."
