@@ -2,3 +2,4 @@
 .venv_path
 LLM_Mirror/
 key.json
+logs/*

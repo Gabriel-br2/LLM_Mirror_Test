@@ -24,10 +24,10 @@ class LLMApi:
         self.payload = "<context>\n"
         self.payload += self.context
         self.payload += "\nFollow the bellow json to answer:\n"
-        self.payload += json.dumps(self.getReturnJsonPattern())
+        self.payload += json.dumps(self.getReturnJsonPattern(), indent=2)
         self.payload += "\n</context>\n"
         self.payload += "<current_turn>\n"
-        self.payload += json.dumps(msg)
+        self.payload += json.dumps(msg, indent=2)
         self.payload += "\n</current_turn>\n"
 
     def request(self) -> str:

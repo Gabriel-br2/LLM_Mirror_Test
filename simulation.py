@@ -71,7 +71,7 @@ class Simulation:
         self.api = LLMApi("https://openrouter.ai/api/v1", model="google/gemma-3n-e4b-it:free")
 
         self.api.setInitialContext(
-            "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button. Please respond only with a JSON string matching this schema. Do not include any explanations, thoughts, or markdown."
+            "You are observing a simulation with several moving agents and a door. Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help the agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud your reasoning and choose the next button. Please respond only with a JSON string matching this schema. Do not include any explanations, thoughts, or markdown."
         )
 
     def request_action(self,data):
@@ -262,20 +262,20 @@ class Simulation:
                 {"id": char.idx + 1, "x": char.pos[0], "y": char.pos[1]}
                 for char in self.characters
             ]
-        
-        self.memory.append({"turn": self.turn, "action": action, "thought": thought, "agents_position": [agents_position]})
-        
+    
         # Build the data dictionary representing the current state
         data = {
-            "turn": self.turn,
+            "current_turn": self.turn,
             "door_state": self.door_state,
-            "agents": agents_position,
+            "current_agents_positions": agents_position,
             "ascii_grid": ["".join(row) for row in self.mainGrid.tolist()],
             "button_map": ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"],
-            "memory": self.memory    
+            "turn_memory": self.memory    
         }
 
         self.data = json.dumps(data, indent=2)
+
+        self.memory.append({"turn": self.turn, "action_taken": action, "last_thought": thought, "door_state": self.door_state, "agents_positions": [agents_position]})
                 
     def render_grid(self):
         """
