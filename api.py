@@ -29,8 +29,9 @@ class LLMApi:
 
     def getReturnJsonPattern(self) -> dict:
         root = dict()
-        root["thought"] = "this is your thougths"
-        root["choice"] = "this your choice"
+        root["prev_reasoning"] = "this is your reasoning about previous actions"
+        root["next_reasoning"] = "this is your reasoning about next actions to take"
+        root["choice"] = "this your button choice"
         return root
 
     def generate(self, msg: dict):

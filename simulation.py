@@ -40,7 +40,7 @@ class Simulation:
         """
         Initializes the simulation, loads configuration, creates grid and characters
         """
-        self.turn = 0  # Current turn number
+        self.turn = 1  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
         self.memory_positions = []
         self.memory_ascii = []
@@ -48,7 +48,7 @@ class Simulation:
         
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
-        self.data = ""
+        self.data = {}
         
         actions = [
             "move_left",
@@ -63,6 +63,7 @@ class Simulation:
         random.shuffle(actions)
 
         self.key_action_map = dict(zip(keys, actions))
+        print("button actions: ", self.key_action_map)
 
         self._load_config()  # Load configuration values
         self._init_grid_and_characters()  # Create grid and characters
@@ -71,7 +72,17 @@ class Simulation:
         self.api = LLMApi('configapi.json')  # Initialize LLM API
 
         self.api.setInitialContext(
-            "You are observing a simulation with several moving agents and a door. Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help the agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud your reasoning and choose the next button. Please respond only with a JSON string matching this schema. Do not include any explanations, thoughts, or markdown."
+            "You are observing a simulation with several moving agents and a door. " \
+            "Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. " \
+            "Your goal is to help the agents exit through the door. " \
+            "Use the outcomes of each action to understand the system and act accordingly. " \
+            "After each step, think out loud your reasoning and choose the next button. " \
+            "Please respond only with a JSON string matching this schema. " \
+            "Do not include any explanations, thoughts, or markdown. " \
+            "Below you will see a memory of previous states and actions taken. " \
+            "This memory is broken into turns. " \
+            "Reason about the previous states and actions taken and collect your thoughts " \
+            "and based on those thought reason about the next action to take and make a choice."
         )
 
     def request_action(self,data):
@@ -112,6 +123,7 @@ class Simulation:
 
             if idx == self.controlable_character:
                 # Create player-controlled character
+                print("LLM control:", color, self.controlable_character)
                 self.characters.append(
                     Player(
                         idx,
@@ -142,7 +154,7 @@ class Simulation:
         Main game loop. Handles events, updates game state, and renders the grid.
         """
         running = True
-        self.generate_JSON(action="start", thought="")  # Initial state
+        self.generate_JSON(action="start", prev_reasoning="", next_reasoning="")  # Initial state
         
         f = 0
         while running:
@@ -155,7 +167,7 @@ class Simulation:
                 #    key_down = self._handle_keydown(event)  # Handle key press
 
             if (f % 2 == 0):
-                reply = self.request_action(self.data)
+                reply = self.request_action(self.json_data)
                 
                 reply = reply.replace("```json", "")
                 reply = reply.replace("```", "")                
@@ -170,13 +182,13 @@ class Simulation:
                     self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format {'thought': 'this is your thoughts', 'choice': 'this your choice'} do not send complementary text only JSON in this format")
                     continue
                 
-                self.Logger.log(self.data, reply)
+                self.Logger.log(self.json_data, reply)
                 
                 self._handle_action(response["choice"])
 
                 self.turn += 1        # Advance turn
                 self._move_npcs()     # Move all NPCs
-                self.generate_JSON(response["choice"], response["thought"])
+                self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"])
 
             self.render_grid()  # Draw everything
                 # self._print_ascii_grid()
@@ -248,7 +260,7 @@ class Simulation:
         for npc in npcs_to_remove:
             self.characters.remove(npc)
 
-    def generate_JSON(self, action=None, thought=""):
+    def generate_JSON(self, action=None, prev_reasoning="", next_reasoning=""):
         """
         Generates and prints a JSON-like dictionary with the current simulation state.
 
@@ -264,7 +276,7 @@ class Simulation:
             ]
     
         # Build the data dictionary representing the current state
-        data = {
+        self.next_data = {
             "current_turn": self.turn,
             "door_state": self.door_state,
             "current_agents_positions": agents_position,
@@ -273,9 +285,11 @@ class Simulation:
             "turn_memory": self.memory    
         }
 
-        self.data = json.dumps(data, indent=2)
+        self.json_data = json.dumps(self.data, indent=2)
 
-        self.memory.append({"turn": self.turn, "action_taken": action, "last_thought": thought, "door_state": self.door_state, "agents_positions": [agents_position]})
+        self.memory.append({"turn": self.turn, "action_taken_on_turn": action, "turn_prev_reasoning": prev_reasoning, "turn_next_reasoning": next_reasoning, "turn_door_state": self.door_state, "agents_positions_on_turn": [agents_position]})
+
+        self.data = self.next_data
                 
     def render_grid(self):
         """
