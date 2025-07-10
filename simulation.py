@@ -40,7 +40,7 @@ class Simulation:
         """
         Initializes the simulation, loads configuration, creates grid and characters
         """
-        self.turn = 1  # Current turn number
+        self.turn = 0  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
         self.memory_positions = []
         self.memory_ascii = []
@@ -176,6 +176,9 @@ class Simulation:
                 print("Reply received: ", reply)
                 print("-" * 100)
 
+                # Advance turn
+                self.turn += 1
+                
                 try:
                     response = json.loads(reply)
                 except:
@@ -186,7 +189,6 @@ class Simulation:
                 
                 self._handle_action(response["choice"])
 
-                self.turn += 1        # Advance turn
                 self._move_npcs()     # Move all NPCs
                 self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"])
 
@@ -276,7 +278,7 @@ class Simulation:
             ]
     
         # Build the data dictionary representing the current state
-        self.next_data = {
+        self.data = {
             "current_turn": self.turn,
             "door_state": self.door_state,
             "current_agents_positions": agents_position,
@@ -285,11 +287,17 @@ class Simulation:
             "turn_memory": self.memory    
         }
 
+        if self.turn != 0:
+            llm_data = {
+                "action_taken_on_turn": action,
+                "turn_prev_reasoning": prev_reasoning,
+                "turn_next_reasoning": next_reasoning
+            }
+            self.memory[self.turn-1].update(llm_data)
+
         self.json_data = json.dumps(self.data, indent=2)
 
-        self.memory.append({"turn": self.turn, "action_taken_on_turn": action, "turn_prev_reasoning": prev_reasoning, "turn_next_reasoning": next_reasoning, "turn_door_state": self.door_state, "agents_positions_on_turn": [agents_position]})
-
-        self.data = self.next_data
+        self.memory.append({"turn": self.turn, "turn_door_state": self.door_state, "agents_positions_on_turn": [agents_position]})
                 
     def render_grid(self):
         """
