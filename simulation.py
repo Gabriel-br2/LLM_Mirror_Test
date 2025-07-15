@@ -45,6 +45,7 @@ class Simulation:
         self.memory_positions = []
         self.memory_ascii = []
         self.Logger = JsonLogger()
+
         
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
@@ -72,17 +73,28 @@ class Simulation:
         self.api = LLMApi('configapi.json')  # Initialize LLM API
 
         self.api.setInitialContext(
-            "You are observing a simulation with several moving agents and a door. " \
-            "Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. " \
-            "Your goal is to help the agents exit through the door. " \
-            "Use the outcomes of each action to understand the system and act accordingly. " \
-            "After each step, think out loud your reasoning and choose the next button. " \
-            "Please respond only with a JSON string matching this schema. " \
-            "Do not include any explanations, thoughts, or markdown. " \
-            "Below you will see a memory of previous states and actions taken. " \
-            "This memory is broken into turns. " \
-            "Reason about the previous states and actions taken and collect your thoughts " \
-            "and based on those thought reason about the next action to take and make a choice."
+            """
+            You are observing a simulation with several moving agents and a door.
+            Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6.
+            Your goal is to help the agents exit through the door.
+            Use the outcomes of each action to understand the system and act accordingly.
+            After each step, think out loud your reasoning and choose the next button.
+            Please respond only with a JSON string matching this schema.
+            Do not include any explanations, thoughts, or markdown.
+        
+            You will create a key action map to assign each of the six buttons to specific actions. 
+            Provide your reasoning for this mapping in the key_action_map field, 
+            explaining how each button corresponds to its chosen action.
+            you can check the key action map is correct by pressing the buttons and see if the actions are performed as expected. if not, you need to change the key action map.
+            expplain all the buttons and put your hypothesis about the key action map.
+            
+            if you press the same button 5 times, make sure your key action map is correct. because probably you are not pressing the correct button. Press the same button continuously is a bad practice.
+            
+            Below you will see a memory of previous states and actions taken.
+            This memory is broken into turns.
+            Reason about the previous states and actions taken and collect your thoughts
+            and based on those thought reason about the next action to take and make a choice.
+            """
         )
 
     def request_action(self,data):
@@ -107,6 +119,9 @@ class Simulation:
         # Randomly select which character is player-controlled
         self.controlable_character = random.randint(0, self.characters_num - 1)
         self.BALL_RADIUS = self.square_tam // 2 - cfg.config["screen"]["space_tam"]
+        
+        self.Logger.log_main_data(self.controlable_character, self.key_action_map)
+
 
     def _init_grid_and_characters(self):
         """
@@ -124,6 +139,7 @@ class Simulation:
             if idx == self.controlable_character:
                 # Create player-controlled character
                 print("LLM control:", color, self.controlable_character)
+                
                 self.characters.append(
                     Player(
                         idx,
@@ -156,41 +172,36 @@ class Simulation:
         running = True
         self.generate_JSON(action="start", prev_reasoning="", next_reasoning="")  # Initial state
         
-        f = 0
         while running:
-            f += 1
-            key_down = False  # Track if a valid key was pressed
+            key_down = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False  # Exit loop if window is closed
+                    running = False
                 #elif event.type == pygame.KEYDOWN:
-                #    key_down = self._handle_keydown(event)  # Handle key press
+                #    key_down = self._handle_keydown(event) 
+                
+            reply = self.request_action(self.json_data)
+            
+            reply = reply.replace("```json", "")
+            reply = reply.replace("```", "")                
+            
+            print("Reply received: ", reply)
+            print("-" * 120)
 
-            if (f % 2 == 0):
-                reply = self.request_action(self.json_data)
-                
-                reply = reply.replace("```json", "")
-                reply = reply.replace("```", "")                
-                
-                #print(self.data)
-                print("Reply received: ", reply)
-                print("-" * 100)
+            self.turn += 1
+            
+            try:
+                response = json.loads(reply)
+            except:
+                self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format  do not send complementary text only JSON in this format")
+                continue
+            
+            self.Logger.log(self.json_data, reply)
+            
+            self._handle_action(response["choice"])
 
-                # Advance turn
-                self.turn += 1
-                
-                try:
-                    response = json.loads(reply)
-                except:
-                    self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format {'thought': 'this is your thoughts', 'choice': 'this your choice'} do not send complementary text only JSON in this format")
-                    continue
-                
-                self.Logger.log(self.json_data, reply)
-                
-                self._handle_action(response["choice"])
-
-                self._move_npcs()     # Move all NPCs
-                self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"])
+            self._move_npcs()     # Move all NPCs
+            self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"], response["key_action_map"])
 
             self.render_grid()  # Draw everything
                 # self._print_ascii_grid()
@@ -262,18 +273,9 @@ class Simulation:
         for npc in npcs_to_remove:
             self.characters.remove(npc)
 
-    def generate_JSON(self, action=None, prev_reasoning="", next_reasoning=""):
-        """
-        Generates and prints a JSON-like dictionary with the current simulation state.
-
-        Args:
-            action (str, optional): The action performed.
-            thought (str, optional): The thought or reasoning for the action.
-        """
-        # Add current turn's action and thought to memory
-
+    def generate_JSON(self, action=None, prev_reasoning="", next_reasoning="", key_action_map=""):
         agents_position = [
-                {"id": char.idx + 1, "x": char.pos[0], "y": char.pos[1]}
+                {"id": char.idx, "x": char.pos[1], "y": char.pos[0]}
                 for char in self.characters
             ]
     
@@ -284,6 +286,7 @@ class Simulation:
             "current_agents_positions": agents_position,
             "ascii_grid": ["".join(row) for row in self.mainGrid.tolist()],
             "button_map": ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"],
+            # "key_action_map": key_action_map,
             "turn_memory": self.memory    
         }
 
@@ -291,7 +294,8 @@ class Simulation:
             llm_data = {
                 "action_taken_on_turn": action,
                 "turn_prev_reasoning": prev_reasoning,
-                "turn_next_reasoning": next_reasoning
+                "turn_next_reasoning": next_reasoning,
+                "key_action_map": key_action_map
             }
             self.memory[self.turn-1].update(llm_data)
 

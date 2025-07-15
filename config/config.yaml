@@ -4,5 +4,5 @@ game:
 screen:
   space_tam: 2
   square_tam: 50
-  x_grid_max: 8
-  y_grid_max: 8
+  x_grid_max: 4
+  y_grid_max: 4

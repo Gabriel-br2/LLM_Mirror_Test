@@ -31,6 +31,7 @@ class LLMApi:
         root = dict()
         root["prev_reasoning"] = "this is your reasoning about previous actions"
         root["next_reasoning"] = "this is your reasoning about next actions to take"
+        root["key_action_map"] = "this is your reasoning about the key action map"
         root["choice"] = "this your button choice"
         return root
 
