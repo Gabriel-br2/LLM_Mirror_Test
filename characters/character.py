@@ -1,5 +1,8 @@
 import pygame
 
+# Initialize font system when module is imported
+pygame.font.init()
+
 
 class Character:
     """
@@ -71,3 +74,19 @@ class Character:
             y * self.square_tam + self.square_tam // 2,
         )
         pygame.draw.circle(screen, self.color, center, self.ball_radius)
+        
+        # Draw the character ID number in the center with contrasting color
+        font = pygame.font.Font(None, 24)
+        id_text = str(self.idx)
+        
+        # Choose text color based on background color for better contrast
+        # Calculate brightness of the character color
+        r, g, b = self.color
+        brightness = (r * 0.299 + g * 0.587 + b * 0.114)
+        
+        # Use white text on dark colors, black text on light colors
+        text_color = (255, 255, 255) if brightness < 128 else (0, 0, 0)
+        
+        text_surface = font.render(id_text, True, text_color)
+        text_rect = text_surface.get_rect(center=center)
+        screen.blit(text_surface, text_rect)

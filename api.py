@@ -29,9 +29,9 @@ class LLMApi:
 
     def getReturnJsonPattern(self) -> dict:
         root = dict()
-        root["prev_reasoning"] = "this is your reasoning about previous actions"
-        root["next_reasoning"] = "this is your reasoning about next actions to take"
-        root["key_action_map"] = "this is your reasoning about the key action map"
+        root["prev_reasoning"] = "this is your detailed analysis of what happened in previous turns. Explain what actions were taken, what results occurred, and what you learned from those outcomes. Include any patterns or cause-effect relationships you observed."
+        root["next_reasoning"] = "this is your strategic thinking about what actions to take next. Based on your previous analysis, explain your hypothesis about what each button might do and justify your choice for the next action. Include your goal and how this action might help achieve it."
+        root["key_action_map"] = "this is your reasoning about the key action map. Analyze past results to understand button functions. Build hypotheses about each button's effect and refine them each turn. If you don't know something, that's okay - just state your uncertainty."
         root["choice"] = "this your button choice"
         return root
 
@@ -49,8 +49,10 @@ class LLMApi:
         request = self.client.chat.completions.create(
             model=self.model, 
             messages=[{"role": "user", "content": self.payload}],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            # reasoning_effort='low' || 'high' || 'medium'
         )
+        print(request.usage)
         return request.choices[0].message.content
 
 def main():
