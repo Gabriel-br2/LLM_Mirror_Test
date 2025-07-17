@@ -98,13 +98,14 @@ The `Simulation` class uses this API to fetch the LLM's action suggestion at eac
 - Logging captures each step, including agent positions, door state, and the LLM's internal "thoughts."
 
 ## 🧾 Version
-- **Current Version:** 1
+- **Current Version:** 1.5
 - **Changelog:**
   - **1.0** — Initial public release with grid simulation, randomized button mapping.
       - **1.1** — Bug that did not allow NPS to leave through the door resolved, added port size parameter.
       - **1.2** — Adding key shuffling each time the simulation starts, added example api code for openrouter.
       - **1.3** — Simulator integration with LLM, for testing we use deepseek-v3-base:free
       - **1.4** — Added input and output json log function, added position memory for llm
+      - **1.5** — Enhanced LLM context with improved key action mapping instructions, implemented threaded API calls for non-blocking gameplay, adjusted turn numbering to start from 1, and added visual player identification numbers on game characters.
 
 ## 👥 Team
 - Rodrigo da S. Guerra

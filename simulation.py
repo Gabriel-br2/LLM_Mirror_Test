@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
 import random
+import threading
+import time
 
 import pygame
 
@@ -40,7 +42,7 @@ class Simulation:
         """
         Initializes the simulation, loads configuration, creates grid and characters
         """
-        self.turn = 0  # Current turn number
+        self.turn = 1  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
         self.memory_positions = []
         self.memory_ascii = []
@@ -50,6 +52,12 @@ class Simulation:
         self.characters_original = []  # Original characters list for reference
         self.door_state = "closed"  # Door can be "open" or "closed"
         self.data = {}
+        
+        # Threading variables for API calls
+        self.api_thread = None
+        self.api_response = None
+        self.waiting_for_api = False
+        self.api_request_data = None
         
         actions = [
             "move_left",
@@ -97,9 +105,32 @@ class Simulation:
             """
         )
 
-    def request_action(self,data):
-        self.api.generate(msg=data)
-        return self.api.request()
+    def request_action_threaded(self, data):
+        """
+        Makes API request in a separate thread to avoid blocking the interface
+        """
+        def api_call():
+            try:
+                self.api.generate(msg=data)
+                response = self.api.request()
+                self.api_response = response
+                self.waiting_for_api = False
+            except Exception as e:
+                print(f"API Error: {e}")
+                self.api_response = None
+                self.waiting_for_api = False
+
+        self.waiting_for_api = True
+        self.api_response = None
+        self.api_thread = threading.Thread(target=api_call)
+        self.api_thread.daemon = True  # Thread will be terminated when main program ends
+        self.api_thread.start()
+
+    def request_action(self, data):
+        """
+        Original method maintained for compatibility, but now uses threading
+        """
+        self.request_action_threaded(data)
 
         # self._print_ascii_grid()  # Uncomment to print grid in ASCII
 
@@ -172,39 +203,74 @@ class Simulation:
         running = True
         self.generate_JSON(action="start", prev_reasoning="", next_reasoning="")  # Initial state
         
+        # Start the first API request
+        self.request_action(self.json_data)
+        
         while running:
-            key_down = False
+            # Handle Pygame events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                #elif event.type == pygame.KEYDOWN:
-                #    key_down = self._handle_keydown(event) 
+                    
+            # Check if we have an API response ready
+            if not self.waiting_for_api and self.api_response is not None:
+                self.process_api_response()
                 
-            reply = self.request_action(self.json_data)
+            # Continue rendering even while waiting for API
+            self.render_grid()
             
-            reply = reply.replace("```json", "")
-            reply = reply.replace("```", "")                
-            
-            print("Reply received: ", reply)
-            print("-" * 120)
+            # Small delay to avoid overloading CPU
+            time.sleep(0.016)  # ~60 FPS
 
-            self.turn += 1
-            
-            try:
-                response = json.loads(reply)
-            except:
-                self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format  do not send complementary text only JSON in this format")
-                continue
-            
-            self.Logger.log(self.json_data, reply)
-            
-            self._handle_action(response["choice"])
+    def process_api_response(self):
+        """
+        Processes API response when it's ready
+        """
+        reply = self.api_response
+        self.api_response = None  # Reset for next request
+        
+        reply = reply.replace("```json", "")
+        reply = reply.replace("```", "")                
+        
+        print("Reply received: ", reply)
+        print("-" * 120)
 
-            self._move_npcs()     # Move all NPCs
-            self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"], response["key_action_map"])
+        self.turn += 1
+        
+        try:
+            response = json.loads(reply)
+        except:
+            self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format  do not send complementary text only JSON in this format")
+            # Start new API request
+            self.request_action(self.json_data)
+            return
+        
+        # Verify if the response contains all required fields
+        required_fields = ["choice", "prev_reasoning", "next_reasoning", "key_action_map"]
+        if not all(field in response for field in required_fields):
+            print("Invalid response format. Missing required fields.")
+            self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format  do not send complementary text only JSON in this format")
+            # Start new API request
+            self.request_action(self.json_data)
+            return
+            
+        # Verify if choice is one of the valid buttons
+        valid_choices = ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"]
+        if response["choice"] not in valid_choices:
+            print(f"Invalid choice: {response['choice']}. Must be one of: {valid_choices}")
+            self.generate_JSON("choice error", f"choice must be exactly one of: {valid_choices}. You sent: {response['choice']}")
+            # Start new API request
+            self.request_action(self.json_data)
+            return
+        
+        self.Logger.log(self.json_data, reply)
+        
+        self._handle_action(response["choice"])
+        self._move_npcs()     # Move all NPCs
+        self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"], response["key_action_map"])
 
-            self.render_grid()  # Draw everything
-                # self._print_ascii_grid()
+        # Start next API request
+        self.request_action(self.json_data)
 
     def _handle_action(self, choice):
         """
@@ -290,14 +356,14 @@ class Simulation:
             "turn_memory": self.memory    
         }
 
-        if self.turn != 0:
+        if self.turn != 1:
             llm_data = {
                 "action_taken_on_turn": action,
                 "turn_prev_reasoning": prev_reasoning,
                 "turn_next_reasoning": next_reasoning,
                 "key_action_map": key_action_map
             }
-            self.memory[self.turn-1].update(llm_data)
+            self.memory[self.turn-2].update(llm_data)
 
         self.json_data = json.dumps(self.data, indent=2)
 
@@ -344,6 +410,26 @@ class Simulation:
         for char in self.characters:
             char.draw(self.screen)
 
+        # # Visual indicator when waiting for API
+        # if self.waiting_for_api:
+        #     # Create a pulsing circle in the top right corner
+        #     current_time = time.time()
+        #     pulse = int((current_time * 3) % 2)  # Pulses every ~0.33 seconds
+        #     color = (255, 255, 0) if pulse else (255, 255, 100)  # Pulsing yellow
+            
+        #     pygame.draw.circle(
+        #         self.screen, 
+        #         color, 
+        #         (self.x_grid_max * self.square_tam - 30, 30), 
+        #         15
+        #     )
+            
+        #     # "API" text in the center of the circle
+        #     font = pygame.font.Font(None, 24)
+        #     text = font.render("API", True, (0, 0, 0))
+        #     text_rect = text.get_rect(center=(self.x_grid_max * self.square_tam - 30, 30))
+        #     self.screen.blit(text, text_rect)
+
         pygame.display.flip()  # Update the display
         self.clock.tick(60)  # Limit to 60 FPS
 
@@ -360,11 +446,12 @@ class Simulation:
         Initializes the Pygame window and clock.
         """
         pygame.init()
+        pygame.font.init()  # Initialize font system
         # Set window size based on grid and square size
         self.screen = pygame.display.set_mode(
             (self.x_grid_max * self.square_tam, self.y_grid_max * self.square_tam)
         )
-        pygame.display.set_caption("Grid with Moving Balls")
+        pygame.display.set_caption("Grid with Moving Balls - LLM Control")
         self.clock = pygame.time.Clock()
 
     def _check_config(self):
