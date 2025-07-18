@@ -79,39 +79,39 @@ class Simulation:
 
         self.api = LLMApi('configapi.json')  # Initialize LLM API
 
-        # Your goal is to help the agents exit through the door.
-            
 
         self.api.setInitialContext(
             """
-            You are observing a simulation with several moving agents and a door.
-            Each turn you can press one of four buttons: btn1, btn2, btn3, btn4.
-            Use the outcomes of each action to understand the system and act accordingly.
-            After each step, think out loud about the previous state and next actions then choose the next button.
-            Please respond only with a JSON string matching this schema.
-            Do not include any explanations, thoughts, or markdown.
-        
-            You will create a key action map to assign each of the four buttons to specific actions. 
-            explaining how each button corresponds to its chosen action.
-            you can check the key action map is correct by pressing the buttons and see if the actions are performed as expected. if not, you need to change the key action map.
-            explain all the buttons and put your hypothesis about the key action map.
-            
-            Check the movements of ALL the agents and the door, then reason about the next action to take and make a choice.
-            
-            your goal is exit through the door.
-            The buttons possible actions are:
-            - move_left
-            - move_right
-            - move_up
-            - move_down
-            you have to choose the correct action for each button.  
-            
-            if you press the same button 5 times, make sure your key action map is correct. because probably you are not pressing the correct button. Press the same button continuously is a bad practice.
-            
-            Below you will see a memory of previous states and actions taken.
-            This memory is broken into turns.
-            Reason about the previous states and actions taken and collect your thoughts
-            and based on those thought reason about the next action to take and make a choice.
+            You are observing a simulation containing multiple agents and a door.
+            Each turn, you are allowed to press one of four buttons: btn1, btn2, btn3, or btn4.
+
+            After each button press, the simulation advances by one step, and you receive a new observation of the environment. This may include changes to agent positions.
+
+            You do not know whether the buttons affect the environment, nor how. Any observed changes might be related to your actions — or not. Your task is to examine these changes, reflect, and try to identify meaningful patterns.
+
+            Think carefully about each turn:
+            - What changed after your last action?
+            - Did the same thing happen before with the same button?
+            - Could this imply a consistent relationship?
+            - Is it possible that one or more buttons correspond to movement directions?
+            - Could one of the agents be affected by your actions?
+
+            Develop hypotheses about:
+            - What each button might be doing (key_action_map)
+            - Whether any agent is consistently responding to your inputs
+
+            It's okay to be uncertain. You are encouraged to think out loud — even if your thoughts are speculative or incomplete. You can press the same button multiple times to gather evidence, but if no meaningful change occurs after repeated presses, that might suggest your assumption is incorrect.
+
+            Be sure to observe the entire system: all agents. Use all available information to update your understanding. Your reasoning should evolve over time as you gather more evidence.
+
+            If an agent is no longer visible in the current observation — for example, if it no longer appears in the ASCII map or position list — this likely means that the agent exited the scene (e.g., through the door). You should then deprioritize or ignore that agent in your reasoning and focus only on agents still present in the scene.
+
+            Please respond only with a JSON string matching the schema below. Do not include any explanations, markdown, or surrounding text.
+
+            If you do not yet know what a button does, use "unknown".
+
+            Below is a memory of the previous turns. Each entry contains the button yous pressed and the resulting environment state. Use this memory to guide your reasoning and choose the next button.
+
             """
         )
 
