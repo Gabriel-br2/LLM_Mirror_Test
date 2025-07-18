@@ -57,7 +57,7 @@ class Character:
         if self.can_move(grid, new_pos):
             grid[self.pos] = "."  # Clear current position
             self.pos = new_pos
-            grid[new_pos[0], new_pos[1]] = str(self.idx + 1)  # Mark new position
+            grid[new_pos[0], new_pos[1]] = str(self.idx)  # Mark new position
             return True
         return False
 

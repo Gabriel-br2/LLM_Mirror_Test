@@ -251,8 +251,9 @@ class Simulation:
         
         try:
             response = json.loads(reply)
-        except:
+        except Exception as e:
             self.generate_JSON("format error", "response sent in invalid format, response must be sent in json format  do not send complementary text only JSON in this format")
+           
             # Start new API request
             self.request_action(self.json_data)
             return
