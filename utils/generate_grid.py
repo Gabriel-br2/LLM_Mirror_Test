@@ -36,7 +36,7 @@ def _generate_grid(y_grid_max, x_grid_max, characters_num, door_size=3):
     positions = list(positions)
 
     # Place each character in the grid, using its index as the label
-    for idx, (x, y) in enumerate(positions, start=1):
+    for idx, (x, y) in enumerate(positions, start=0):
         mainGrid[x, y] = str(idx)
 
     # Add a door ('D') on a random border

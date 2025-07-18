@@ -30,9 +30,13 @@ class LLMApi:
     def getReturnJsonPattern(self) -> dict:
         root = dict()
         root["prev_reasoning"] = "this is your detailed analysis of what happened in previous turns. Explain what actions were taken, what results occurred, and what you learned from those outcomes. Include any patterns or cause-effect relationships you observed."
-        root["next_reasoning"] = "this is your strategic thinking about what actions to take next. Based on your previous analysis, explain your hypothesis about what each button might do and justify your choice for the next action. Include your goal and how this action might help achieve it."
-        root["key_action_map"] = "this is your reasoning about the key action map. Analyze past results to understand button functions. Build hypotheses about each button's effect and refine them each turn. If you don't know something, that's okay - just state your uncertainty."
+        
+        root["key_action_map"] = "Analyze the key action map based on previous results. Reflect on how each button behaved in the past and form hypotheses about their effects. Update your understanding after each turn, refining your hypotheses as you gather more data. It's okay to be uncertain—just state it clearly. Evaluate all buttons, even those whose functions are still unknown. Feel free to press the same button multiple times to test for consistent behavior. If the observed outcome doesn't match your expectations, revise the key action map accordingly."
+        
+        root["next_reasoning"] = "this is your strategic thinking about what actions to take next. Based on your previous analysis and the key action map, explain your hypothesis about what each button might do and justify your choice for the next action. Include your goal and how this action might help achieve it."
+        
         root["choice"] = "this your button choice"
+        
         return root
 
     def generate(self, msg: dict):
@@ -64,8 +68,7 @@ def main():
 
     data = {}
 
-    data = {'turn': 0, 'door_state': 'closed', 'agents': [{'id': 1, 'x': 4, 'y': 4}, {'id': 2, 'x': 5, 'y': 8}, {'id': 3, 'x': 8, 'y': 5}, {'id': 4, 'x': 1, 'y': 5}], 'ascii_grid': ['######DDD#', '#....4...#', '#........#', '#........#', '#...1....#', '#.......2#', '#........#', '#........#', '#....3...#', '##########'], 'button_map': ['btn1', 'btn2', 'btn3' 'btn4', 'btn5', 'btn6'], 'memory': [{'turn': 0, 'action': 'start', 'thought': ''}]}
-
+  
     api.generate(msg=data)
 
     print(api.request())

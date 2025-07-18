@@ -15,7 +15,6 @@ from utils.generate_log import JsonLogger
 from utils.config import mainConfig
 from utils.generate_grid import _generate_grid
 
-# Load configuration from YAML file
 cfg = mainConfig()
 cfg.read_config()
 
@@ -80,21 +79,34 @@ class Simulation:
 
         self.api = LLMApi('configapi.json')  # Initialize LLM API
 
+        # Your goal is to help the agents exit through the door.
+            
+
         self.api.setInitialContext(
             """
             You are observing a simulation with several moving agents and a door.
             Each turn you can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6.
-            Your goal is to help the agents exit through the door.
             Use the outcomes of each action to understand the system and act accordingly.
-            After each step, think out loud your reasoning and choose the next button.
+            After each step, think out loud about the previous state and next actions then choose the next button.
             Please respond only with a JSON string matching this schema.
             Do not include any explanations, thoughts, or markdown.
         
             You will create a key action map to assign each of the six buttons to specific actions. 
-            Provide your reasoning for this mapping in the key_action_map field, 
             explaining how each button corresponds to its chosen action.
             you can check the key action map is correct by pressing the buttons and see if the actions are performed as expected. if not, you need to change the key action map.
-            expplain all the buttons and put your hypothesis about the key action map.
+            explain all the buttons and put your hypothesis about the key action map.
+            
+            Check the movements of ALL the agents and the door, then reason about the next action to take and make a choice.
+            
+            your goal is exit through the door.
+            The buttons possible actions are:
+            - move_left
+            - move_right
+            - move_up
+            - move_down
+            - open_door
+            - close_door 
+            you have to choose the correct action for each button.  
             
             if you press the same button 5 times, make sure your key action map is correct. because probably you are not pressing the correct button. Press the same button continuously is a bad practice.
             
@@ -347,21 +359,21 @@ class Simulation:
     
         # Build the data dictionary representing the current state
         self.data = {
+            "previous_turn_memory": self.memory,    
             "current_turn": self.turn,
-            "door_state": self.door_state,
+            "current_door_state": self.door_state,
             "current_agents_positions": agents_position,
-            "ascii_grid": ["".join(row) for row in self.mainGrid.tolist()],
-            "button_map": ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"],
+            "current_grid_ascii": ["".join(row) for row in self.mainGrid.tolist()],
+            #"button_map": ["btn1", "btn2", "btn3", "btn4", "btn5", "btn6"],
             # "key_action_map": key_action_map,
-            "turn_memory": self.memory    
         }
 
         if self.turn != 1:
             llm_data = {
                 "action_taken_on_turn": action,
                 "turn_prev_reasoning": prev_reasoning,
+                "key_action_map": key_action_map,
                 "turn_next_reasoning": next_reasoning,
-                "key_action_map": key_action_map
             }
             self.memory[self.turn-2].update(llm_data)
 
