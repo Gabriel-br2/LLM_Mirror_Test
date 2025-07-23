@@ -29,9 +29,12 @@ class LLMApi:
 
     def getReturnJsonPattern(self) -> dict:
         root = dict()
-        root["prev_reasoning"] = "this is your detailed analysis of what happened in previous turns. Explain what actions were taken, what results occurred, and what you learned from those outcomes. Include any patterns or cause-effect relationships you observed."
+                
+        root["movements"] = "this is the your detailed analysis of the previous movements of the agents in the previous turn. You must include the delta of the movements of all agents in the previous turn. The delta is the difference between the current position and the previous position of the agent."
         
         root["key_action_map"] = "Analyze the key action map based on previous results. Reflect on how each button behaved in the past and form hypotheses about their effects. Update your understanding after each turn, refining your hypotheses as you gather more data. It's okay to be uncertain—just state it clearly. Evaluate all buttons, even those whose functions are still unknown. Feel free to press the same button multiple times to test for consistent behavior. If the observed outcome doesn't match your expectations, revise the key action map accordingly."
+        
+        root["prev_reasoning"] = "this is your detailed analysis of what happened in previous turns. Explain what actions were taken, what results occurred, and what you learned from those outcomes. Include any patterns or cause-effect relationships you observed."
         
         root["next_reasoning"] = "this is your strategic thinking about what actions to take next. Based on your previous analysis and the key action map, explain your hypothesis about what each button might do and justify your choice for the next action. Include your goal and how this action might help achieve it."
         

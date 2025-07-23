@@ -44,6 +44,7 @@ class Simulation:
         self.turn = 1  # Current turn number
         self.memory = []  # Stores actions and thoughts for each turn
         self.memory_positions = []
+        self.memory_delta = []
         self.memory_ascii = []
         self.Logger = JsonLogger()
 
@@ -82,38 +83,51 @@ class Simulation:
 
         self.api.setInitialContext(
             """
-            You are observing a simulation containing multiple agents and a door.
-            Each turn, you are allowed to press one of four buttons: btn1, btn2, btn3, or btn4.
+            You are observing a simulation with multiple agents and a door.
+            Each turn, you may press one of four buttons: `btn1`, `btn2`, `btn3`, or `btn4`.
 
-            After each button press, the simulation advances by one step, and you receive a new observation of the environment. This may include changes to agent positions.
+            Each button press advances the simulation by one step and provides:
 
-            You do not know whether the buttons affect the environment, nor how. Any observed changes might be related to your actions — or not. Your task is to examine these changes, reflect, and try to identify meaningful patterns.
+            * An updated ASCII grid (`current_grid_ascii`)
+            * Positions of visible agents (`current_agents_positions`)
+            * Turn history (`previous_turn_memory`)
 
-            Think carefully about each turn:
-            - What changed after your last action?
-            - Did the same thing happen before with the same button?
-            - Could this imply a consistent relationship?
-            - Is it possible that one or more buttons correspond to movement directions?
-            - Could one of the agents be affected by your actions?
+            ### Goal
 
-            Develop hypotheses about:
-            - What each button might be doing (key_action_map)
-            - Whether any agent is consistently responding to your inputs
+            Your task is to understand what each button does by analyzing how agent positions change. Build and refine **hypotheses** over time through observation.
 
-            It's okay to be uncertain. You are encouraged to think out loud — even if your thoughts are speculative or incomplete. You can press the same button multiple times to gather evidence, but if no meaningful change occurs after repeated presses, that might suggest your assumption is incorrect.
+            ### Reasoning Process (every turn)
 
-            Be sure to observe the entire system: all agents. Use all available information to update your understanding. Your reasoning should evolve over time as you gather more evidence.
+            1. **Compare past and current states**:
 
-            If an agent is no longer visible in the current observation — for example, if it no longer appears in the ASCII map or position list — this likely means that the agent exited the scene (e.g., through the door). You should then deprioritize or ignore that agent in your reasoning and focus only on agents still present in the scene.
+            * Which agents moved, disappeared, or remained?
+            * What button was pressed?
 
-            Please respond only with a JSON string matching the schema below. Do not include any explanations, markdown, or surrounding text.
+            2. **Track agent-specific behavior**:
 
-            If you do not yet know what a button does, use "unknown".
+            * Is the movement consistent with past button effects?
+            * Could a specific agent be reacting to your input?
 
-            Below is a memory of the previous turns. Each entry contains the button yous pressed and the resulting environment state. Use this memory to guide your reasoning and choose the next button.
+            3. **Update your internal model**:
 
-            """
-        )
+            * Buttons may control direction, trigger effects, or have no impact.
+            * Agents might act independently.
+            * You may **not** control any agent directly.
+
+            4. **Discard exited agents**:
+
+            * If an agent disappears, assume it exited via the door and stop tracking it.
+
+            ### Important Constraints
+
+            * Button effects are **fixed** during the simulation.
+            Their function does **not** change over time.
+            * If outcomes vary, seek **contextual explanations** (e.g., path blocked, agent missing).
+            * Don't revise your model based on isolated anomalies. Use repeated trials to gain confidence.
+
+            Be honest about uncertainty. Your job is to incrementally infer causal relationships between buttons and agent behaviors.
+
+            """)
 
     def request_action_threaded(self, data):
         """
@@ -278,7 +292,7 @@ class Simulation:
         
         self._handle_action(response["choice"])
         self._move_npcs()     # Move all NPCs
-        self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"], response["key_action_map"])
+        self.generate_JSON(response["choice"], response["prev_reasoning"], response["next_reasoning"], response["key_action_map"], response["movements"])
 
         # Start next API request
         self.request_action(self.json_data)
@@ -350,7 +364,7 @@ class Simulation:
         for npc in npcs_to_remove:
             self.characters.remove(npc)
 
-    def generate_JSON(self, action=None, prev_reasoning="", next_reasoning="", key_action_map=""):
+    def generate_JSON(self, action=None, prev_reasoning="", next_reasoning="", key_action_map="", movements=""):
         agents_position = [
                 {"id": char.idx, "x": char.pos[1], "y": char.pos[0]}
                 for char in self.characters
@@ -370,6 +384,7 @@ class Simulation:
         if self.turn != 1:
             llm_data = {
                 "turn_prev_reasoning": prev_reasoning,
+                "movements": movements,
                 "key_action_map": key_action_map,
                 "turn_next_reasoning": next_reasoning,
                 "action_taken_on_turn": action,
