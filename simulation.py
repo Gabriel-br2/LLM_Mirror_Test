@@ -5,7 +5,9 @@ import threading
 import time
 import pygame
 
-from api import LLMApi
+from LLM.api import LLM_Api as LLM
+#from LLM.local import LLM_Local as LLM
+
 from characters.NPC import NPC
 from characters.player import Player
 from utils.generate_log import JsonLogger
@@ -51,7 +53,7 @@ class Simulation:
         self.key_action_map = dict(zip(keys, actions))
         print("button actions:", self.key_action_map)
 
-        self.api = LLMApi()
+        self.api = LLM()
         self.Logger = JsonLogger(model_name=self.api.model)
 
         self._load_config()

@@ -5,7 +5,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
-class LLMApi:
+class LLM_Api:
     def __init__(self):
         load_dotenv()
                 
