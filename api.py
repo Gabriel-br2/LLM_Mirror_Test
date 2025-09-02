@@ -3,34 +3,26 @@ import json
 import os
 
 from openai import OpenAI
-
+from dotenv import load_dotenv
 
 class LLMApi:
-    def __init__(self, config_path: str):
+    def __init__(self):
+        load_dotenv()
+                
+        self.base_url = os.getenv("BASE_URL")
+        self.api_key = os.getenv("API_KEY")
+        self.model = os.getenv("MODEL")
         
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(base_dir, config_path)
-        try:
-            with open(config_path, 'r') as config_file:
-                config = json.load(config_file)
-                self.client = OpenAI(base_url= config['api_client']['base_url'],
-                                     api_key= config['api_client']['api_key'])
-                self.model = config['api_model']['model']
-                self.api_extra_headers = config['api_extra_headers'].get('extra_headers', {})
-        except FileNotFoundError:
-            print(f"Configuration file not found at {config_path}")
-            return None
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON from the configuration file at {config_path}")
-            return None 
-
+        self.client = OpenAI(base_url= self.base_url, api_key= self.api_key)
+        self.api_extra_headers = ""   
+        
     def setInitialContext(self, context: str):
         self.context = context
 
-    def getReturnJsonPattern(self) -> dict:
+    def getReturnJsonPattern(self):
         root = dict()
                 
-        root["movements"] = "this is the your detailed analysis of the previous movements of the agents in the previous turn. You must include the delta of the movements of all agents in the previous turn. The delta is the difference between the current position and the previous position of the agent."
+        root["movements"] = "This is the your detailed analysis of the movements of the agents in the previous turn. You must include the delta of the movements of all agents in the previous turn. The delta is the difference between the current position and the previous position of the agent."
         
         root["key_action_map"] = "Analyze the key action map based on previous results. Reflect on how each button behaved in the past and form hypotheses about their effects. Update your understanding after each turn, refining your hypotheses as you gather more data. It's okay to be uncertain—just state it clearly. Evaluate all buttons, even those whose functions are still unknown. Feel free to press the same button multiple times to test for consistent behavior. If the observed outcome doesn't match your expectations, revise the key action map accordingly."
         
@@ -61,21 +53,3 @@ class LLMApi:
         )
         print(request.usage)
         return request.choices[0].message.content
-
-def main():
-    api = LLMApi('configapi.json')
-
-    api.setInitialContext(
-        "You are observing a simulation with several moving agents and a door. You can press one of six buttons: btn1, btn2, btn3, btn4, btn5, btn6. Your goal is to help all agents exit through the door. Use the outcomes of each action to understand the system and act accordingly. After each step, think out loud and choose the next button."
-    )
-
-    data = {}
-
-  
-    api.generate(msg=data)
-
-    print(api.request())
-
-
-if __name__ == "__main__":
-    main()

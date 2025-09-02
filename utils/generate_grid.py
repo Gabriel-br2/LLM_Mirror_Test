@@ -1,69 +1,51 @@
 import random
-
 import numpy as np
 
 
-def _generate_grid(y_grid_max, x_grid_max, characters_num, door_size=3):
-    """
-    Generates a 2D grid with borders, randomly placed characters, and a door on a random border.
+def _generate_grid(height, width, num_characters, door_size=3):
+    def add_borders(grid: np.ndarray) -> None:
+        grid[0, :] = "#"
+        grid[-1, :] = "#"
+        grid[:, 0] = "#"
+        grid[:, -1] = "#"
 
-    Args:
-        y_grid_max (int): Number of rows in the grid.
-        x_grid_max (int): Number of columns in the grid.
-        characters_num (int): Number of characters to place inside the grid.
+    def generate_character_positions() -> list[tuple[int, int]]:
+        positions = set()
+        while len(positions) < num_characters:
+            x = random.randint(1, width - 2)
+            y = random.randint(1, height - 2)
+            positions.add((x, y))
+        return list(positions)
 
-    Returns:
-        tuple:
-            - mainGrid (np.ndarray): The generated grid as a 2D numpy array of strings.
-            - positions (list of tuple): List of (x, y) positions where characters were placed.
-    """
-    # Initialize the grid filled with '.'
-    mainGrid = np.full((y_grid_max, x_grid_max), ".", dtype=str)
+    def place_characters(grid: np.ndarray, positions: list[tuple[int, int]]) -> None:
+        for idx, (x, y) in enumerate(positions):
+            grid[y, x] = str(idx)
 
-    # Add borders to the grid (set border cells to '#')
-    mainGrid[0, :] = "#"
-    mainGrid[-1, :] = "#"
-    mainGrid[:, 0] = "#"
-    mainGrid[:, -1] = "#"
+    def add_door(grid: np.ndarray) -> None:
+        wall = random.choice([0, 1, 2, 3])
+        half_size = (door_size - 1) // 2
 
-    # Add characters to the grid at random positions (not on the border)
-    positions = set()
-    while len(positions) < characters_num:
-        x = random.randint(1, x_grid_max - 2)  # Avoid border columns
-        y = random.randint(1, y_grid_max - 2)  # Avoid border rows
-        positions.add((x, y))
+        if wall in [0, 2]:
+            x = random.randint(1, width - 2)
+            y = 0 if wall == 0 else height - 1
+            start, end = x - half_size, x + half_size + 1
+            start = max(start + 1, 0)
+            end = min(end, width - 1)
+            grid[y, start:end] = "D"
 
-    positions = list(positions)
+        else:
+            x = width - 1 if wall == 1 else 0
+            y = random.randint(1, height - 2)
+            start, end = y - half_size, y + half_size + 1
+            start = max(start + 1, 0)
+            end = min(end, height - 1)
+            grid[start:end, x] = "D"
 
-    # Place each character in the grid, using its index as the label
-    for idx, (x, y) in enumerate(positions, start=0):
-        mainGrid[x, y] = str(idx)
+    grid = np.full((height, width), ".", dtype=str)
 
-    # Add a door ('D') on a random border
-    # door_wall: 0=North, 1=East, 2=South, 3=West
-    door_wall = random.choice([0, 1, 2, 3])
-    wall_range = (
-        range(1, x_grid_max - 1) if door_wall in [0, 2] else range(1, y_grid_max - 1)
-    )
+    add_borders(grid)
+    positions = generate_character_positions()
+    place_characters(grid, positions)
+    add_door(grid)
 
-    door_size_mid = (door_size - 1) // 2
-
-    if door_wall in [0, 2]:  # Norte ou Sul
-        door_x = random.choice(wall_range)
-        door_y = 0 if door_wall == 0 else y_grid_max - 1
-        d1, d2 = door_x - door_size_mid, door_x + door_size_mid + 1
-
-        d1 = max(d1+1, 0)
-        d2 = min(d2, x_grid_max-1)
-        mainGrid[door_y, d1:d2] = "D"
-
-    elif door_wall in [1, 3]:  # Leste ou Oeste
-        door_x = x_grid_max - 1 if door_wall == 1 else 0
-        door_y = random.choice(wall_range)
-        d1, d2 = door_y - door_size_mid, door_y + door_size_mid + 1
-        
-        d1 = max(d1+1, 0)
-        d2 = min(d2, x_grid_max-1)
-        mainGrid[d1:d2, door_x] = "D"
-
-    return mainGrid, positions
+    return grid, positions

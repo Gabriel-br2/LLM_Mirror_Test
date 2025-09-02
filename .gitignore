@@ -5,3 +5,4 @@ key.json
 logs/*
 configapi.json
 .github
+.env
